@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"funding-app/app/auth"
+	"funding-app/app/campaign"
 	"funding-app/app/handler"
 	"funding-app/app/user"
 	"funding-app/database"
@@ -41,17 +42,22 @@ func main() {
 
 	// repository
 	userRepository := user.NewUserRepository(db)
+	campaignRepository := campaign.NewCampaignRepository(db)
 
 	// service
 	userService := user.NewService(userRepository)
 	authService := auth.NewJwtService()
+	campaignService := campaign.NewCampaignService(campaignRepository)
 
 	// handler
 	userHandler := handler.NewUserHandler(userService, authService)
+	campaignHandler := handler.NewCampaignHandler(campaignService)
 
+	// initial route
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
+	// list of route
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +68,10 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Post("/users", userHandler.RegisterUser)
 			r.Post("/sessions", userHandler.LoginUser)
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Get("/campaigns", campaignHandler.GetCampaigns)
 		})
 	})
 
