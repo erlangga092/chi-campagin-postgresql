@@ -8,6 +8,19 @@ import (
 	"github.com/google/uuid"
 )
 
+type (
+	Meta struct {
+		Message string `json:"message"`
+		Code    int    `json:"code"`
+		Status  string `json:"status"`
+	}
+
+	ResponseFormatter struct {
+		Meta Meta        `json:"meta"`
+		Data interface{} `json:"data"`
+	}
+)
+
 func GenerateID() string {
 	IDCandidate := uuid.New()
 
@@ -26,4 +39,19 @@ func JSON(w http.ResponseWriter, data interface{}, status int) {
 
 	w.WriteHeader(status)
 	w.Write([]byte(dataByte))
+}
+
+func APIResponse(message string, code int, status string, data interface{}) ResponseFormatter {
+	meta := Meta{
+		Message: message,
+		Code:    code,
+		Status:  status,
+	}
+
+	response := ResponseFormatter{
+		Meta: meta,
+		Data: data,
+	}
+
+	return response
 }
