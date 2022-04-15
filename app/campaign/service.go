@@ -7,7 +7,7 @@ import (
 
 type Service interface {
 	GetCampaigns(userID string) ([]Campaign, error)
-	GetCampaignByID(ID string) (Campaign, error)
+	GetCampaignDetail(ID string) (Campaign, error)
 }
 
 type service struct {
@@ -39,7 +39,7 @@ func (s *service) GetCampaigns(userID string) ([]Campaign, error) {
 	return campaigns, nil
 }
 
-func (s *service) GetCampaignByID(ID string) (Campaign, error) {
+func (s *service) GetCampaignDetail(ID string) (Campaign, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

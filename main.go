@@ -77,6 +77,7 @@ func main() {
 
 		r.Group(func(r chi.Router) {
 			r.Get("/campaigns", campaignHandler.GetCampaigns)
+			r.Get("/campaign/{id}", campaignHandler.GetCampaignDetail)
 		})
 	})
 

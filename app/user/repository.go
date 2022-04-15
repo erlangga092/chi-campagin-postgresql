@@ -42,7 +42,6 @@ func (r *repository) Save(ctx context.Context, user User) (User, error) {
 		time.Now().Format(layoutDateTime))
 
 	if err != nil {
-		log.Println(err.Error())
 		return user, err
 	}
 

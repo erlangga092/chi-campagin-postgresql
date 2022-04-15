@@ -30,10 +30,10 @@ func (h *campaignHandler) GetCampaigns(w http.ResponseWriter, r *http.Request) {
 	helper.JSON(w, response, http.StatusOK)
 }
 
-func (h *campaignHandler) GetCampaignByID(w http.ResponseWriter, r *http.Request) {
+func (h *campaignHandler) GetCampaignDetail(w http.ResponseWriter, r *http.Request) {
 	campaignID := chi.URLParam(r, "id")
 
-	campaign, err := h.campaignService.GetCampaignByID(campaignID)
+	campaign, err := h.campaignService.GetCampaignDetail(campaignID)
 	if err != nil {
 		response := helper.APIResponse("Failed to get campaign", http.StatusBadRequest, "error", err.Error())
 		helper.JSON(w, response, http.StatusBadRequest)

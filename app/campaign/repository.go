@@ -4,14 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Repository interface {
 	FindAll(ctx context.Context) ([]Campaign, error)
 	FindByUserID(ctx context.Context, userID string) ([]Campaign, error)
 	FindByID(ctx context.Context, ID string) (Campaign, error)
+	Save(ctx context.Context, campaign Campaign) (Campaign, error)
 }
 
 type repository struct {
@@ -174,5 +176,37 @@ func (r *repository) FindByID(ctx context.Context, ID string) (Campaign, error) 
 		}
 	}
 
+	return campaign, nil
+}
+
+func (r *repository) Save(ctx context.Context, campaign Campaign) (Campaign, error) {
+	sqlQuery := "INSERT into campaigns (id, user_id, name, short_description, description, slug, perks, goal_amount, current_amount, backer_count, created_at, updated_at) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
+
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return campaign, err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx, &campaign.ID,
+		&campaign.UserID,
+		&campaign.Name,
+		&campaign.ShortDescription,
+		&campaign.Description,
+		&campaign.Slug,
+		&campaign.Perks,
+		&campaign.GoalAmount,
+		&campaign.CurrentAmount,
+		&campaign.BackerCount,
+		time.Now().Format(layoutDateTime),
+		time.Now().Format(layoutDateTime),
+	)
+
+	if err != nil {
+		return campaign, err
+	}
+
+	log.Info("Success insert new campaign!")
 	return campaign, nil
 }
