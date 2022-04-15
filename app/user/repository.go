@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -12,6 +13,7 @@ type Repository interface {
 	Save(ctx context.Context, user User) (User, error)
 	FindByID(ctx context.Context, userID string) (User, error)
 	FindByEmail(ctx context.Context, email string) (User, error)
+	Update(ctx context.Context, user User) (User, error)
 }
 
 type repository struct {
@@ -132,6 +134,30 @@ func (r *repository) FindByEmail(ctx context.Context, email string) (User, error
 		}
 	}
 
-	log.Info(user)
 	return user, nil
+}
+
+func (r *repository) Update(ctx context.Context, user User) (User, error) {
+	sqlQuery := "UPDATE users SET avatar_file_name = $1 WHERE id = $2"
+
+	results, err := r.DB.ExecContext(ctx, sqlQuery, user.AvatarFileName, user.ID)
+	if err != nil {
+		return user, err
+	}
+
+	affected, err := results.RowsAffected()
+	if err != nil {
+		return user, err
+	}
+
+	if int(affected) > 0 {
+		detailedUser, err := r.FindByID(ctx, user.ID)
+		if err != nil {
+			return user, err
+		}
+
+		return detailedUser, nil
+	}
+
+	return user, errors.New("failed when update")
 }

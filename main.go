@@ -68,6 +68,8 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Post("/users", userHandler.RegisterUser)
 			r.Post("/sessions", userHandler.LoginUser)
+			r.Post("/email_checkers", userHandler.IsEmailAvailable)
+			r.Post("/avatars", userHandler.UploadAvatar)
 		})
 
 		r.Group(func(r chi.Router) {

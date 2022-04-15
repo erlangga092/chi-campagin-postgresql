@@ -11,6 +11,7 @@ import (
 type Repository interface {
 	FindAll(ctx context.Context) ([]Campaign, error)
 	FindByUserID(ctx context.Context, userID string) ([]Campaign, error)
+	FindByID(ctx context.Context, ID string) (Campaign, error)
 }
 
 type repository struct {
@@ -127,4 +128,51 @@ func (r *repository) FindByUserID(ctx context.Context, userID string) ([]Campaig
 	}
 
 	return campaigns, nil
+}
+
+func (r *repository) FindByID(ctx context.Context, ID string) (Campaign, error) {
+	campaign := Campaign{}
+	var createdAt, updatedAt string
+
+	sqlQuery := "SELECT id, user_id, name, short_description, description, slug, perks, goal_amount, current_amount, backer_count, created_at, updated_at FROM campaigns WHERE id = $1"
+
+	rows, err := r.DB.QueryContext(ctx, sqlQuery, ID)
+	if err != nil {
+		return campaign, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		err := rows.Scan(
+			&campaign.ID,
+			&campaign.UserID,
+			&campaign.Name,
+			&campaign.ShortDescription,
+			&campaign.Description,
+			&campaign.Slug,
+			&campaign.Perks,
+			&campaign.GoalAmount,
+			&campaign.CurrentAmount,
+			&campaign.BackerCount,
+			&createdAt,
+			&updatedAt,
+		)
+
+		if err != nil {
+			return campaign, err
+		}
+	}
+
+	if createdAt != "" || updatedAt != "" {
+		if campaign.CreatedAt, err = time.Parse(time.RFC3339, createdAt); err != nil {
+			log.Fatal(err)
+		}
+
+		if campaign.UpdatedAt, err = time.Parse(time.RFC3339, updatedAt); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return campaign, nil
 }

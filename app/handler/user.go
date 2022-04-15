@@ -7,10 +7,14 @@ import (
 	"funding-app/app/user"
 	"net/http"
 	"runtime"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 	log "github.com/sirupsen/logrus"
 )
+
+// alias map
+type M map[string]interface{}
 
 type userHandler struct {
 	userService user.Service
@@ -136,4 +140,69 @@ func (h *userHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	formatter := user.FormatUser(loggedInUser, token)
 	response := helper.APIResponse("Login successfully", http.StatusOK, "success", formatter)
 	helper.JSON(w, response, http.StatusOK)
+}
+
+func (h *userHandler) IsEmailAvailable(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		errorMessage := "Content type must be application/json"
+
+		response := helper.APIResponse("Checking email failed", http.StatusBadRequest, "error", errorMessage)
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	log.Info("goroutine-start-login-handler : ", runtime.NumGoroutine())
+
+	v := validator.New()
+	input := user.CheckEmailInput{}
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		response := helper.APIResponse("Checking email failed", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	// validate input
+	err = v.Struct(input)
+	if err != nil {
+		var errors []string
+
+		for _, e := range err.(validator.ValidationErrors) {
+			errors = append(errors, e.Error())
+		}
+
+		response := helper.APIResponse("Checking email failed", http.StatusUnprocessableEntity, "error", errors)
+		helper.JSON(w, response, http.StatusUnprocessableEntity)
+		return
+	}
+
+	isAvailable, err := h.userService.IsEmailAvailable(input)
+	if err != nil {
+		response := helper.APIResponse("Checking email failed", http.StatusUnprocessableEntity, "error", err.Error())
+		helper.JSON(w, response, http.StatusUnprocessableEntity)
+		return
+	}
+
+	data := M{
+		"is_available": isAvailable,
+	}
+
+	// check goroutine
+	log.Info("goroutine-end-login-handler : ", runtime.NumGoroutine())
+
+	response := helper.APIResponse("Success checking email", http.StatusOK, "success", data)
+	helper.JSON(w, response, http.StatusOK)
+}
+
+func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
+	if !strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+		errorMessage := "Content-Type must be multipart/form-data"
+
+		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", errorMessage)
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	log.Info("OK!")
 }

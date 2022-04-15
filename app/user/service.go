@@ -4,13 +4,17 @@ import (
 	"context"
 	"errors"
 	"funding-app/app/helper"
+	"runtime"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Service interface {
 	RegisterUser(input RegisterUserInput) (User, error)
 	LoginUser(input LoginUserInput) (User, error)
+	IsEmailAvailable(input CheckEmailInput) (bool, error)
+	UploadAvatar(userID string, fileLocation string) (User, error)
 }
 
 type service struct {
@@ -22,8 +26,11 @@ func NewService(userRepository Repository) Service {
 }
 
 func (s *service) RegisterUser(input RegisterUserInput) (User, error) {
-	user := User{}
+	var user User
 	userID := helper.GenerateID()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	user.ID = userID
 	user.Name = input.Name
@@ -38,9 +45,6 @@ func (s *service) RegisterUser(input RegisterUserInput) (User, error) {
 	password := string(passwordHash)
 	user.PasswordHash = password
 	user.Role = "user"
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	newUser, err := s.userRepository.Save(ctx, user)
 	if err != nil {
@@ -69,4 +73,44 @@ func (s *service) LoginUser(input LoginUserInput) (User, error) {
 	}
 
 	return user, err
+}
+
+func (s *service) IsEmailAvailable(input CheckEmailInput) (bool, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// check goroutine
+	log.Info("goroutine-start-checkEmail-service : ", runtime.NumGoroutine())
+
+	user, err := s.userRepository.FindByEmail(ctx, input.Email)
+
+	log.Info("goroutine-end-checkEmail-service : ", runtime.NumGoroutine())
+	if err != nil {
+		return false, err
+	}
+
+	if user.ID == "" {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (s *service) UploadAvatar(userID string, fileLocation string) (User, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	user, err := s.userRepository.FindByID(ctx, userID)
+	if err != nil {
+		return user, err
+	}
+
+	user.AvatarFileName = fileLocation
+
+	updatedUser, err := s.userRepository.Update(ctx, user)
+	if err != nil {
+		return updatedUser, err
+	}
+
+	return updatedUser, nil
 }
