@@ -1,9 +1,13 @@
 package campaign
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 type Service interface {
 	GetCampaigns(userID string) ([]Campaign, error)
+	GetCampaignByID(ID string) (Campaign, error)
 }
 
 type service struct {
@@ -33,4 +37,20 @@ func (s *service) GetCampaigns(userID string) ([]Campaign, error) {
 	}
 
 	return campaigns, nil
+}
+
+func (s *service) GetCampaignByID(ID string) (Campaign, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	campaign, err := s.campaignRepository.FindByID(ctx, ID)
+	if err != nil {
+		return campaign, err
+	}
+
+	if campaign.ID == "" {
+		return campaign, errors.New("no campaign found")
+	}
+
+	return campaign, nil
 }
