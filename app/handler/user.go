@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"funding-app/app/auth"
 	"funding-app/app/helper"
+	"funding-app/app/key"
 	"funding-app/app/user"
 	"net/http"
 	"runtime"
@@ -204,5 +205,6 @@ func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info("OK!")
+	userCtx := r.Context().Value(key.CtxAuthKey{}).(user.User)
+	log.Info(userCtx)
 }

@@ -5,6 +5,7 @@ import (
 	"funding-app/app/auth"
 	"funding-app/app/campaign"
 	"funding-app/app/handler"
+	cm "funding-app/app/middleware"
 	"funding-app/app/user"
 	"funding-app/database"
 	"log"
@@ -69,7 +70,9 @@ func main() {
 			r.Post("/users", userHandler.RegisterUser)
 			r.Post("/sessions", userHandler.LoginUser)
 			r.Post("/email_checkers", userHandler.IsEmailAvailable)
-			r.Post("/avatars", userHandler.UploadAvatar)
+			r.With(func(h http.Handler) http.Handler {
+				return cm.AuthMiddleware(h, authService, userService)
+			}).Post("/avatars", userHandler.UploadAvatar)
 		})
 
 		r.Group(func(r chi.Router) {
