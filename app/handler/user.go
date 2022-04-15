@@ -2,11 +2,15 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"funding-app/app/auth"
 	"funding-app/app/helper"
 	"funding-app/app/key"
 	"funding-app/app/user"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -205,6 +209,70 @@ func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userCtx := r.Context().Value(key.CtxAuthKey{}).(user.User)
-	log.Info(userCtx)
+	err := r.ParseMultipartForm(1024)
+	if err != nil {
+		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	alias := r.FormValue("alias")
+	uploadedFile, handler, err := r.FormFile("avatar")
+	if err != nil {
+		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	defer uploadedFile.Close()
+
+	dir, err := os.Getwd()
+	if err != nil {
+		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	// get user data from middleware
+	user := r.Context().Value(key.CtxAuthKey{}).(user.User)
+	filename := fmt.Sprintf("%s-%s", user.ID, handler.Filename)
+
+	if alias != "" {
+		filename = fmt.Sprintf("%s-%s%s", user.ID, alias, filepath.Ext(handler.Filename))
+	}
+
+	fileLocation := filepath.Join(dir, "images", filename)
+
+	// upload avatar to service
+	_, err = h.userService.UploadAvatar(user.ID, fileLocation)
+	if err != nil {
+		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	defer targetFile.Close()
+
+	_, err = io.Copy(targetFile, uploadedFile)
+	if err != nil {
+		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	log.Info("Success upload avatar!")
+
+	data := M{
+		"is_uploaded": true,
+	}
+
+	response := helper.APIResponse("Success upload avatar", http.StatusCreated, "success", data)
+	helper.JSON(w, response, http.StatusCreated)
 }
