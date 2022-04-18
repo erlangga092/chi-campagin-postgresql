@@ -1,11 +1,15 @@
 package handler
 
 import (
+	"encoding/json"
 	"funding-app/app/campaign"
 	"funding-app/app/helper"
+	"funding-app/app/key"
+	"funding-app/app/user"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 )
 
 type campaignHandler struct {
@@ -26,20 +30,71 @@ func (h *campaignHandler) GetCampaigns(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := helper.APIResponse("List of campaigns", http.StatusOK, "success", campaigns)
+	formatter := campaign.FormatCampaigns(campaigns)
+	response := helper.APIResponse("List of campaigns", http.StatusOK, "success", formatter)
 	helper.JSON(w, response, http.StatusOK)
 }
 
 func (h *campaignHandler) GetCampaignDetail(w http.ResponseWriter, r *http.Request) {
 	campaignID := chi.URLParam(r, "id")
 
-	campaign, err := h.campaignService.GetCampaignDetail(campaignID)
+	detailCampaign, err := h.campaignService.GetCampaignDetail(campaignID)
 	if err != nil {
 		response := helper.APIResponse("Failed to get campaign", http.StatusBadRequest, "error", err.Error())
 		helper.JSON(w, response, http.StatusBadRequest)
 		return
 	}
 
-	response := helper.APIResponse("Detail of campaigns", http.StatusOK, "success", campaign)
+	formatter := campaign.FormatCampaign(detailCampaign)
+	response := helper.APIResponse("Detail of campaigns", http.StatusOK, "success", formatter)
+	helper.JSON(w, response, http.StatusOK)
+}
+
+func (h *campaignHandler) CreateCampaign(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		errorMessage := "Content must be application/json"
+
+		response := helper.APIResponse("Failed to create campaign", http.StatusBadRequest, "error", errorMessage)
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	v := validator.New()
+	input := campaign.CreateCampaignInput{}
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		response := helper.APIResponse("Failed to create campaign", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	// validate input
+	err = v.Struct(input)
+	if err != nil {
+		var errors []string
+
+		for _, e := range err.(validator.ValidationErrors) {
+			errors = append(errors, e.Error())
+		}
+
+		response := helper.APIResponse("Failed to create campaign", http.StatusUnprocessableEntity, "error", errors)
+		helper.JSON(w, response, http.StatusUnprocessableEntity)
+		return
+	}
+
+	// get data user from middleware
+	user := r.Context().Value(key.CtxAuthKey{}).(user.User)
+	input.User = user
+
+	newCampaign, err := h.campaignService.CreateCampaign(input)
+	if err != nil {
+		response := helper.APIResponse("Failed to create campaign", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	formatter := campaign.FormatCampaign(newCampaign)
+	response := helper.APIResponse("Detail of campaigns", http.StatusOK, "success", formatter)
 	helper.JSON(w, response, http.StatusOK)
 }
