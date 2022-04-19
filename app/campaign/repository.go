@@ -14,6 +14,8 @@ type Repository interface {
 	FindByUserID(ctx context.Context, userID string) ([]Campaign, error)
 	FindByID(ctx context.Context, ID string) (Campaign, error)
 	Save(ctx context.Context, campaign Campaign) (Campaign, error)
+	FindImagesByCampaignID(ctx context.Context, campaignID string) ([]CampaignImage, error)
+	FindImagePrimaryByCampaignID(ctx context.Context, campaignID string) ([]CampaignImage, error)
 }
 
 type repository struct {
@@ -75,6 +77,13 @@ func (r *repository) FindAll(ctx context.Context) ([]Campaign, error) {
 			}
 		}
 
+		fmt.Println("Campaign ID : ", campaign.ID)
+		campaignImages, err := r.FindImagePrimaryByCampaignID(ctx, campaign.ID)
+		if err != nil {
+			return campaigns, err
+		}
+
+		campaign.CampaignImages = campaignImages
 		campaigns = append(campaigns, campaign)
 	}
 
@@ -209,4 +218,87 @@ func (r *repository) Save(ctx context.Context, campaign Campaign) (Campaign, err
 
 	log.Info("Success insert new campaign!")
 	return campaign, nil
+}
+
+func (r *repository) FindImagesByCampaignID(ctx context.Context, campaignID string) ([]CampaignImage, error) {
+	campaignImages := []CampaignImage{}
+
+	sqlQuery := "SELECT id, campaign_id, file_name, is_primary FROM campaign_images WHERE id = $1"
+
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return campaignImages, err
+	}
+
+	rows, err := stmt.QueryContext(ctx, campaignID)
+	if err != nil {
+		return campaignImages, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var isPrimaryInt int
+		campaignImage := CampaignImage{}
+		campaignImage.IsPrimary = false
+
+		if err := rows.Scan(
+			&campaignImage.ID,
+			&campaignImage.CampaignID,
+			&campaignImage.FileName,
+			&isPrimaryInt,
+		); err != nil {
+			return campaignImages, err
+		}
+
+		if isPrimaryInt == 1 {
+			campaignImage.IsPrimary = true
+		}
+
+		campaignImages = append(campaignImages, campaignImage)
+	}
+
+	return campaignImages, nil
+}
+
+func (r *repository) FindImagePrimaryByCampaignID(ctx context.Context, campaignID string) ([]CampaignImage, error) {
+	campaignImages := []CampaignImage{}
+
+	sqlQuery := "SELECT id, campaign_id, file_name, is_primary FROM campaign_images WHERE campaign_id = $1 AND is_primary = 1"
+
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return campaignImages, err
+	}
+
+	rows, err := stmt.QueryContext(ctx, campaignID)
+	if err != nil {
+		return campaignImages, err
+	}
+
+	defer rows.Close()
+
+	if rows.Next() {
+		var isPrimaryInt int
+		campaignImage := CampaignImage{}
+		campaignImage.IsPrimary = false
+
+		if err := rows.Scan(
+			&campaignImage.ID,
+			&campaignImage.CampaignID,
+			&campaignImage.FileName,
+			&isPrimaryInt,
+		); err != nil {
+			return campaignImages, err
+		}
+
+		if isPrimaryInt == 1 {
+			campaignImage.IsPrimary = true
+		}
+
+		campaignImages = append(campaignImages, campaignImage)
+	}
+
+	log.Info(campaignImages)
+	return campaignImages, nil
 }

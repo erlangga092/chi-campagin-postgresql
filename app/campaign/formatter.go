@@ -22,6 +22,10 @@ func FormatCampaign(campaign Campaign) CampaignFormatter {
 	formatter.CurrentAmount = campaign.CurrentAmount
 	formatter.GoalAmount = campaign.GoalAmount
 
+	if len(campaign.CampaignImages) > 0 {
+		formatter.ImageURL = campaign.CampaignImages[0].FileName
+	}
+
 	return formatter
 }
 
