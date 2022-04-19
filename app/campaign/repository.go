@@ -16,6 +16,8 @@ type Repository interface {
 	Save(ctx context.Context, campaign Campaign) (Campaign, error)
 	FindImagesByCampaignID(ctx context.Context, campaignID string) ([]CampaignImage, error)
 	FindImagePrimaryByCampaignID(ctx context.Context, campaignID string) ([]CampaignImage, error)
+	SaveImage(ctx context.Context, campaignImage CampaignImage) (CampaignImage, error)
+	MarkAllImageAsNonPrimary(ctx context.Context, campaignID string) (bool, error)
 }
 
 type repository struct {
@@ -238,21 +240,17 @@ func (r *repository) FindImagesByCampaignID(ctx context.Context, campaignID stri
 	defer rows.Close()
 
 	if rows.Next() {
-		var isPrimaryInt int
 		campaignImage := CampaignImage{}
-		campaignImage.IsPrimary = false
 
-		if err := rows.Scan(
+		err := rows.Scan(
 			&campaignImage.ID,
 			&campaignImage.CampaignID,
 			&campaignImage.FileName,
-			&isPrimaryInt,
-		); err != nil {
-			return campaignImages, err
-		}
+			&campaignImage.IsPrimary,
+		)
 
-		if isPrimaryInt == 1 {
-			campaignImage.IsPrimary = true
+		if err != nil {
+			return campaignImages, err
 		}
 
 		campaignImages = append(campaignImages, campaignImage)
@@ -279,21 +277,17 @@ func (r *repository) FindImagePrimaryByCampaignID(ctx context.Context, campaignI
 	defer rows.Close()
 
 	if rows.Next() {
-		var isPrimaryInt int
 		campaignImage := CampaignImage{}
-		campaignImage.IsPrimary = false
 
-		if err := rows.Scan(
+		err := rows.Scan(
 			&campaignImage.ID,
 			&campaignImage.CampaignID,
 			&campaignImage.FileName,
-			&isPrimaryInt,
-		); err != nil {
-			return campaignImages, err
-		}
+			&campaignImage.IsPrimary,
+		)
 
-		if isPrimaryInt == 1 {
-			campaignImage.IsPrimary = true
+		if err != nil {
+			return campaignImages, err
 		}
 
 		campaignImages = append(campaignImages, campaignImage)
@@ -301,4 +295,49 @@ func (r *repository) FindImagePrimaryByCampaignID(ctx context.Context, campaignI
 
 	log.Info(campaignImages)
 	return campaignImages, nil
+}
+
+func (r *repository) SaveImage(ctx context.Context, campaignImage CampaignImage) (CampaignImage, error) {
+	sqlQuery := "INSERT INTO campaign_images (id, campaign_id, file_name, is_primary, created_at, updated_at) VALUES($1, $2, $3, $4, $5, $6)"
+
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return campaignImage, err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx,
+		&campaignImage.ID,
+		&campaignImage.CampaignID,
+		&campaignImage.FileName,
+		&campaignImage.IsPrimary,
+		time.Now().Format(layoutDateTime),
+		time.Now().Format(layoutDateTime),
+	)
+
+	if err != nil {
+		return campaignImage, err
+	}
+
+	log.Print("Success insert campaign image")
+	return campaignImage, nil
+}
+
+func (r *repository) MarkAllImageAsNonPrimary(ctx context.Context, campaignID string) (bool, error) {
+	sqlQuery := "UPDATE campaign_images SET is_primary = false WHERE campaign_id = $1"
+
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return false, err
+	}
+
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx, campaignID)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

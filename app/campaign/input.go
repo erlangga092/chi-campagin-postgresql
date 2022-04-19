@@ -11,4 +11,10 @@ type (
 		GoalAmount       int    `json:"goal_amount" validate:"required"`
 		User             user.User
 	}
+
+	CreateCampaignImageInput struct {
+		CampaignID string `form:"campaign_id"`
+		IsPrimary  bool   `form:"is_primary"`
+		User       user.User
+	}
 )
