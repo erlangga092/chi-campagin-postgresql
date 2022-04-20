@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	log "github.com/sirupsen/logrus"
 )
 
 // alias map
@@ -242,8 +241,6 @@ func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		helper.JSON(w, response, http.StatusBadRequest)
 		return
 	}
-
-	log.Info("Success upload avatar!")
 
 	data := M{
 		"is_uploaded": true,

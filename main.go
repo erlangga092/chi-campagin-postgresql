@@ -5,7 +5,6 @@ import (
 	"funding-app/app/auth"
 	"funding-app/app/campaign"
 	"funding-app/app/handler"
-	"funding-app/app/helper"
 	cm "funding-app/app/middleware"
 	"funding-app/app/user"
 	"funding-app/database"
@@ -41,9 +40,6 @@ func main() {
 
 	log.Println(status)
 	fmt.Println("postgreSQL connected!")
-
-	ID := helper.GenerateID()
-	fmt.Println(ID)
 
 	// repository
 	userRepository := user.NewUserRepository(db)

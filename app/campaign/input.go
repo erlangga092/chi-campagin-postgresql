@@ -13,7 +13,7 @@ type (
 	}
 
 	CreateCampaignImageInput struct {
-		CampaignID string `form:"campaign_id"`
+		CampaignID string `form:"campaign_id" validate:"required"`
 		IsPrimary  bool   `form:"is_primary"`
 		User       user.User
 	}

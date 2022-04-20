@@ -3,7 +3,6 @@ package campaign
 import (
 	"context"
 	"errors"
-	"fmt"
 	"funding-app/app/helper"
 	"strings"
 )
@@ -112,8 +111,6 @@ func (s *service) UploadCampaignImage(input CreateCampaignImageInput, fileLocati
 	campaignImage.CampaignID = input.CampaignID
 	campaignImage.IsPrimary = isPrimary
 	campaignImage.FileName = fileLocation
-
-	fmt.Println("campaign_image.is_primary", campaignImage.IsPrimary)
 
 	newCampaignImage, err := s.campaignRepository.SaveImage(ctx, campaignImage)
 	if err != nil {

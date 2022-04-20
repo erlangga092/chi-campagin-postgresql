@@ -15,7 +15,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	log "github.com/sirupsen/logrus"
 )
 
 type campaignHandler struct {
@@ -171,8 +170,6 @@ func (h *campaignHandler) UploadCampaignImage(w http.ResponseWriter, r *http.Req
 		helper.JSON(w, response, http.StatusBadRequest)
 		return
 	}
-
-	log.Info("Success upload campaign image!")
 
 	data := M{
 		"is_uploaded": true,

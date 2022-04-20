@@ -31,7 +31,12 @@ const (
 func (r *repository) Save(ctx context.Context, user User) (User, error) {
 	sqlQuery := "INSERT INTO users (id, name, occupation, email, password_hash, avatar_file_name, role, created_at, updated_at) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9)"
 
-	_, err := r.DB.ExecContext(ctx, sqlQuery, user.ID,
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return user, err
+	}
+
+	_, err = stmt.ExecContext(ctx, user.ID,
 		user.Name,
 		user.Occupation,
 		user.Email,
@@ -45,7 +50,6 @@ func (r *repository) Save(ctx context.Context, user User) (User, error) {
 		return user, err
 	}
 
-	log.Info("Success insert new user!")
 	return user, nil
 }
 
@@ -55,7 +59,12 @@ func (r *repository) FindByID(ctx context.Context, userID string) (User, error) 
 
 	sqlQuery := "SELECT id, name, occupation, email, password_hash, avatar_file_name, role, created_at, updated_at FROM users WHERE id = $1"
 
-	rows, err := r.DB.QueryContext(ctx, sqlQuery, userID)
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return user, err
+	}
+
+	rows, err := stmt.QueryContext(ctx, userID)
 	if err != nil {
 		return user, err
 	}
@@ -89,7 +98,6 @@ func (r *repository) FindByID(ctx context.Context, userID string) (User, error) 
 		}
 	}
 
-	log.Info(user)
 	return user, nil
 }
 
@@ -99,7 +107,12 @@ func (r *repository) FindByEmail(ctx context.Context, email string) (User, error
 
 	sqlQuery := "SELECT id, name, occupation, email, password_hash, avatar_file_name, role, created_at, updated_at FROM users WHERE email = $1"
 
-	rows, err := r.DB.QueryContext(ctx, sqlQuery, email)
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return user, err
+	}
+
+	rows, err := stmt.QueryContext(ctx, email)
 	if err != nil {
 		return user, err
 	}
@@ -139,7 +152,12 @@ func (r *repository) FindByEmail(ctx context.Context, email string) (User, error
 func (r *repository) Update(ctx context.Context, user User) (User, error) {
 	sqlQuery := "UPDATE users SET avatar_file_name = $1 WHERE id = $2"
 
-	results, err := r.DB.ExecContext(ctx, sqlQuery, user.AvatarFileName, user.ID)
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return user, err
+	}
+
+	results, err := stmt.ExecContext(ctx, user.AvatarFileName, user.ID)
 	if err != nil {
 		return user, err
 	}

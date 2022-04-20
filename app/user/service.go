@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"funding-app/app/helper"
-	"runtime"
 
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -80,12 +78,7 @@ func (s *service) IsEmailAvailable(input CheckEmailInput) (bool, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// check goroutine
-	log.Info("goroutine-start-checkEmail-service : ", runtime.NumGoroutine())
-
 	user, err := s.userRepository.FindByEmail(ctx, input.Email)
-
-	log.Info("goroutine-end-checkEmail-service : ", runtime.NumGoroutine())
 	if err != nil {
 		return false, err
 	}

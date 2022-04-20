@@ -3,7 +3,6 @@ package campaign
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -35,11 +34,14 @@ func NewCampaignRepository(DB *sql.DB) Repository {
 func (r *repository) FindAll(ctx context.Context) ([]Campaign, error) {
 	campaigns := []Campaign{}
 
-	fmt.Println(layoutDateTime)
-
 	sqlQuery := "SELECT id, user_id, name, short_description, description, slug, perks, goal_amount, current_amount, backer_count, created_at, updated_at FROM campaigns"
 
-	rows, err := r.DB.QueryContext(ctx, sqlQuery)
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return campaigns, err
+	}
+
+	rows, err := stmt.QueryContext(ctx)
 	if err != nil {
 		return campaigns, err
 	}
@@ -79,7 +81,6 @@ func (r *repository) FindAll(ctx context.Context) ([]Campaign, error) {
 			}
 		}
 
-		fmt.Println("Campaign ID : ", campaign.ID)
 		campaignImages, err := r.FindImagePrimaryByCampaignID(ctx, campaign.ID)
 		if err != nil {
 			return campaigns, err
@@ -97,7 +98,12 @@ func (r *repository) FindByUserID(ctx context.Context, userID string) ([]Campaig
 
 	sqlQuery := "SELECT id, user_id, name, short_description, description, slug, perks, goal_amount, current_amount, backer_count, created_at, updated_at FROM campaigns WHERE user_id = $1"
 
-	rows, err := r.DB.QueryContext(ctx, sqlQuery, userID)
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return campaigns, err
+	}
+
+	rows, err := stmt.QueryContext(ctx, userID)
 	if err != nil {
 		return campaigns, err
 	}
@@ -149,7 +155,12 @@ func (r *repository) FindByID(ctx context.Context, ID string) (Campaign, error) 
 
 	sqlQuery := "SELECT id, user_id, name, short_description, description, slug, perks, goal_amount, current_amount, backer_count, created_at, updated_at FROM campaigns WHERE id = $1"
 
-	rows, err := r.DB.QueryContext(ctx, sqlQuery, ID)
+	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
+	if err != nil {
+		return campaign, err
+	}
+
+	rows, err := stmt.QueryContext(ctx, ID)
 	if err != nil {
 		return campaign, err
 	}
