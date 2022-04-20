@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -41,8 +40,6 @@ func (h *userHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		helper.JSON(w, response, http.StatusBadRequest)
 		return
 	}
-
-	log.Info("goroutine-start-register-handler : ", runtime.NumGoroutine())
 
 	v := validator.New()
 	input := user.RegisterUserInput{}
@@ -82,9 +79,6 @@ func (h *userHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check goroutine
-	log.Info("goroutine-end-register-handler : ", runtime.NumGoroutine())
-
 	formatter := user.FormatUser(newUser, token)
 	response := helper.APIResponse("Account has been created", http.StatusCreated, "success", formatter)
 	helper.JSON(w, response, http.StatusCreated)
@@ -98,8 +92,6 @@ func (h *userHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		helper.JSON(w, response, http.StatusBadRequest)
 		return
 	}
-
-	log.Info("goroutine-start-login-handler : ", runtime.NumGoroutine())
 
 	v := validator.New()
 	input := user.LoginUserInput{}
@@ -139,9 +131,6 @@ func (h *userHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check goroutine
-	log.Info("goroutine-end-login-handler : ", runtime.NumGoroutine())
-
 	formatter := user.FormatUser(loggedInUser, token)
 	response := helper.APIResponse("Login successfully", http.StatusOK, "success", formatter)
 	helper.JSON(w, response, http.StatusOK)
@@ -155,8 +144,6 @@ func (h *userHandler) IsEmailAvailable(w http.ResponseWriter, r *http.Request) {
 		helper.JSON(w, response, http.StatusBadRequest)
 		return
 	}
-
-	log.Info("goroutine-start-login-handler : ", runtime.NumGoroutine())
 
 	v := validator.New()
 	input := user.CheckEmailInput{}
@@ -193,9 +180,6 @@ func (h *userHandler) IsEmailAvailable(w http.ResponseWriter, r *http.Request) {
 		"is_available": isAvailable,
 	}
 
-	// check goroutine
-	log.Info("goroutine-end-login-handler : ", runtime.NumGoroutine())
-
 	response := helper.APIResponse("Success checking email", http.StatusOK, "success", data)
 	helper.JSON(w, response, http.StatusOK)
 }
@@ -226,13 +210,6 @@ func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 
 	defer uploadedFile.Close()
 
-	dir, err := os.Getwd()
-	if err != nil {
-		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
-		helper.JSON(w, response, http.StatusBadRequest)
-		return
-	}
-
 	// get user data from middleware
 	user := r.Context().Value(key.CtxAuthKey{}).(user.User)
 	filename := fmt.Sprintf("%s-%s", user.ID, handler.Filename)
@@ -241,9 +218,8 @@ func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		filename = fmt.Sprintf("%s-%s%s", user.ID, alias, filepath.Ext(handler.Filename))
 	}
 
-	fileLocation := filepath.Join(dir, "images", filename)
+	fileLocation := fmt.Sprintf("images/%s", filename)
 
-	// upload avatar to service
 	_, err = h.userService.UploadAvatar(user.ID, fileLocation)
 	if err != nil {
 		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())

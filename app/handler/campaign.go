@@ -2,14 +2,20 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"funding-app/app/campaign"
 	"funding-app/app/helper"
 	"funding-app/app/key"
 	"funding-app/app/user"
+	"io"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	log "github.com/sirupsen/logrus"
 )
 
 type campaignHandler struct {
@@ -97,4 +103,81 @@ func (h *campaignHandler) CreateCampaign(w http.ResponseWriter, r *http.Request)
 	formatter := campaign.FormatCampaign(newCampaign)
 	response := helper.APIResponse("Detail of campaigns", http.StatusOK, "success", formatter)
 	helper.JSON(w, response, http.StatusOK)
+}
+
+func (h *campaignHandler) UploadCampaignImage(w http.ResponseWriter, r *http.Request) {
+	if !strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+		errorMessage := "Content must be multipart/form-data"
+
+		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", errorMessage)
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	err := r.ParseMultipartForm(1024)
+	if err != nil {
+		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	uploadedFile, handler, err := r.FormFile("image")
+	if err != nil {
+		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	defer uploadedFile.Close()
+
+	// get user data from middleware
+	user := r.Context().Value(key.CtxAuthKey{}).(user.User)
+
+	isPrimary := false
+	isPrimaryInput := r.FormValue("is_primary")
+	isPrimaryInputBool, _ := strconv.ParseBool(isPrimaryInput)
+
+	if isPrimaryInput != "" && isPrimaryInputBool {
+		isPrimary = true
+	}
+
+	input := campaign.CreateCampaignImageInput{}
+	input.CampaignID = r.FormValue("campaign_id")
+	input.User = user
+	input.IsPrimary = isPrimary
+
+	filename := fmt.Sprintf("%s-%s", input.CampaignID, handler.Filename)
+	fileLocation := fmt.Sprintf("files/%s", filename)
+
+	_, err = h.campaignService.UploadCampaignImage(input, fileLocation)
+	if err != nil {
+		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 06666)
+	if err != nil {
+		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	defer targetFile.Close()
+
+	_, err = io.Copy(targetFile, uploadedFile)
+	if err != nil {
+		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	log.Info("Success upload campaign image!")
+
+	data := M{
+		"is_uploaded": true,
+	}
+
+	response := helper.APIResponse("Success upload campaign image", http.StatusCreated, "success", data)
+	helper.JSON(w, response, http.StatusCreated)
 }

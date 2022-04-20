@@ -325,7 +325,7 @@ func (r *repository) SaveImage(ctx context.Context, campaignImage CampaignImage)
 }
 
 func (r *repository) MarkAllImageAsNonPrimary(ctx context.Context, campaignID string) (bool, error) {
-	sqlQuery := "UPDATE campaign_images SET is_primary = false WHERE campaign_id = $1"
+	sqlQuery := "UPDATE campaign_images SET is_primary = 0 WHERE campaign_id = $1"
 
 	stmt, err := r.DB.PrepareContext(ctx, sqlQuery)
 	if err != nil {

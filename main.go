@@ -85,6 +85,9 @@ func main() {
 			r.With(func(h http.Handler) http.Handler {
 				return cm.AuthMiddleware(h, authService, userService)
 			}).Post("/campaigns", campaignHandler.CreateCampaign)
+			r.With(func(h http.Handler) http.Handler {
+				return cm.AuthMiddleware(h, authService, userService)
+			}).Post("/campaign-images", campaignHandler.UploadCampaignImage)
 		})
 	})
 
