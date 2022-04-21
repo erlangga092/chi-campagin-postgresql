@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"funding-app/app/helper"
+	"mime/multipart"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -12,7 +13,7 @@ type Service interface {
 	RegisterUser(input RegisterUserInput) (User, error)
 	LoginUser(input LoginUserInput) (User, error)
 	IsEmailAvailable(input CheckEmailInput) (bool, error)
-	UploadAvatar(userID string, fileLocation string) (User, error)
+	UploadAvatar(userID string, uploadedFile multipart.File) (User, error)
 	GetUserByID(userID string) (User, error)
 }
 
@@ -90,7 +91,7 @@ func (s *service) IsEmailAvailable(input CheckEmailInput) (bool, error) {
 	return false, nil
 }
 
-func (s *service) UploadAvatar(userID string, fileLocation string) (User, error) {
+func (s *service) UploadAvatar(userID string, uploadedFile multipart.File) (User, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -99,7 +100,12 @@ func (s *service) UploadAvatar(userID string, fileLocation string) (User, error)
 		return user, err
 	}
 
-	user.AvatarFileName = fileLocation
+	imageURL, err := helper.ImageUploadAvatarHandler(uploadedFile)
+	if err != nil {
+		return user, err
+	}
+
+	user.AvatarFileName = imageURL
 
 	updatedUser, err := s.userRepository.Update(ctx, user)
 	if err != nil {

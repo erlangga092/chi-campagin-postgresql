@@ -2,15 +2,11 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"funding-app/app/auth"
 	"funding-app/app/helper"
 	"funding-app/app/key"
 	"funding-app/app/user"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -199,8 +195,7 @@ func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	alias := r.FormValue("alias")
-	uploadedFile, handler, err := r.FormFile("avatar")
+	uploadedFile, _, err := r.FormFile("avatar")
 	if err != nil {
 		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
 		helper.JSON(w, response, http.StatusBadRequest)
@@ -211,31 +206,8 @@ func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 
 	// get user data from middleware
 	user := r.Context().Value(key.CtxAuthKey{}).(user.User)
-	filename := fmt.Sprintf("%s-%s", user.ID, handler.Filename)
 
-	if alias != "" {
-		filename = fmt.Sprintf("%s-%s%s", user.ID, alias, filepath.Ext(handler.Filename))
-	}
-
-	fileLocation := fmt.Sprintf("images/%s", filename)
-
-	_, err = h.userService.UploadAvatar(user.ID, fileLocation)
-	if err != nil {
-		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
-		helper.JSON(w, response, http.StatusBadRequest)
-		return
-	}
-
-	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
-		helper.JSON(w, response, http.StatusBadRequest)
-		return
-	}
-
-	defer targetFile.Close()
-
-	_, err = io.Copy(targetFile, uploadedFile)
+	_, err = h.userService.UploadAvatar(user.ID, uploadedFile)
 	if err != nil {
 		response := helper.APIResponse("Failed to upload avatar", http.StatusBadRequest, "error", err.Error())
 		helper.JSON(w, response, http.StatusBadRequest)
