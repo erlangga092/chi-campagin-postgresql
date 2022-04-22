@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"funding-app/app/helper"
+	"funding-app/app/key"
 	"mime/multipart"
+	"sync"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -92,21 +94,27 @@ func (s *service) IsEmailAvailable(input CheckEmailInput) (bool, error) {
 }
 
 func (s *service) UploadAvatar(userID string, uploadedFile multipart.File) (User, error) {
+	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	ch := make(chan key.FileUploadResponse)
+	defer close(ch)
 
 	user, err := s.userRepository.FindByID(ctx, userID)
 	if err != nil {
 		return user, err
 	}
 
-	imageURL, err := helper.ImageUploadAvatarHandler(uploadedFile)
-	if err != nil {
-		return user, err
-	}
+	wg.Add(1)
 
-	user.AvatarFileName = imageURL
+	// make goroutine with passing channel
+	go helper.ImageUploadAvatarHandler(&wg, uploadedFile, ch)
+	fileResponse := <-ch
 
+	wg.Wait()
+
+	user.AvatarFileName = fileResponse.SecureURL
 	updatedUser, err := s.userRepository.Update(ctx, user)
 	if err != nil {
 		return updatedUser, err
