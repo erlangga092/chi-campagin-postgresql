@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"funding-app/app/helper"
+	"funding-app/app/key"
+	"mime/multipart"
 	"strings"
+	"sync"
 )
 
 type Service interface {
 	GetCampaigns(userID string) ([]Campaign, error)
 	GetCampaignDetail(ID string) (Campaign, error)
 	CreateCampaign(input CreateCampaignInput) (Campaign, error)
-	UploadCampaignImage(input CreateCampaignImageInput, fileLocation string) (CampaignImage, error)
+	UploadCampaignImage(input CreateCampaignImageInput, uploadedFile multipart.File) (CampaignImage, error)
 }
 
 type service struct {
@@ -83,10 +86,15 @@ func (s *service) CreateCampaign(input CreateCampaignInput) (Campaign, error) {
 	return newCampaign, nil
 }
 
-func (s *service) UploadCampaignImage(input CreateCampaignImageInput, fileLocation string) (CampaignImage, error) {
+func (s *service) UploadCampaignImage(input CreateCampaignImageInput, uploadedFile multipart.File) (CampaignImage, error) {
+	var wg sync.WaitGroup
 	campaignImage := CampaignImage{}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	ch := make(chan key.FileUploadResponse)
+	defer close(ch)
 
 	campaign, err := s.campaignRepository.FindByID(ctx, input.CampaignID)
 	if err != nil {
@@ -110,8 +118,20 @@ func (s *service) UploadCampaignImage(input CreateCampaignImageInput, fileLocati
 	campaignImage.ID = helper.GenerateID()
 	campaignImage.CampaignID = input.CampaignID
 	campaignImage.IsPrimary = isPrimary
-	campaignImage.FileName = fileLocation
 
+	wg.Add(1)
+
+	// make goroutine with passing channel
+	go helper.ImageUploadCampaignImageHandler(&wg, uploadedFile, ch)
+	fileResponse := <-ch
+
+	wg.Wait()
+
+	if fileResponse.Err != nil {
+		return campaignImage, fileResponse.Err
+	}
+
+	campaignImage.FileName = fileResponse.SecureURL
 	newCampaignImage, err := s.campaignRepository.SaveImage(ctx, campaignImage)
 	if err != nil {
 		return newCampaignImage, err

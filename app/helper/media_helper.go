@@ -48,20 +48,31 @@ func ImageUploadAvatarHandler(wg *sync.WaitGroup, input interface{}, fileRespons
 	}
 }
 
-func ImageUploadCampaignImageHandler(input interface{}) (string, error) {
+func ImageUploadCampaignImageHandler(wg *sync.WaitGroup, input interface{}, fileResponse chan key.FileUploadResponse) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	defer wg.Done()
 
 	// create cloudinary instance
 	cld, err := cloudinary.NewFromParams(envCloudName, envAPIKey, envAPISecret)
 	if err != nil {
-		return "", err
+		fileResponse <- key.FileUploadResponse{
+			SecureURL: "",
+			Err:       err,
+		}
 	}
 
 	uploadParam, err := cld.Upload.Upload(ctx, input, uploader.UploadParams{Folder: envUploadFolderCampaignImage})
 	if err != nil {
-		return "", err
+		fileResponse <- key.FileUploadResponse{
+			SecureURL: "",
+			Err:       err,
+		}
 	}
 
-	return uploadParam.SecureURL, nil
+	fileResponse <- key.FileUploadResponse{
+		SecureURL: uploadParam.SecureURL,
+		Err:       nil,
+	}
 }

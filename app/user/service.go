@@ -114,6 +114,10 @@ func (s *service) UploadAvatar(userID string, uploadedFile multipart.File) (User
 
 	wg.Wait()
 
+	if fileResponse.Err != nil {
+		return user, fileResponse.Err
+	}
+
 	user.AvatarFileName = fileResponse.SecureURL
 	updatedUser, err := s.userRepository.Update(ctx, user)
 	if err != nil {

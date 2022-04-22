@@ -2,14 +2,11 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"funding-app/app/campaign"
 	"funding-app/app/helper"
 	"funding-app/app/key"
 	"funding-app/app/user"
-	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -120,7 +117,7 @@ func (h *campaignHandler) UploadCampaignImage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	uploadedFile, handler, err := r.FormFile("image")
+	uploadedFile, _, err := r.FormFile("image")
 	if err != nil {
 		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
 		helper.JSON(w, response, http.StatusBadRequest)
@@ -145,26 +142,7 @@ func (h *campaignHandler) UploadCampaignImage(w http.ResponseWriter, r *http.Req
 	input.User = user
 	input.IsPrimary = isPrimary
 
-	filename := fmt.Sprintf("%s-%s", input.CampaignID, handler.Filename)
-	fileLocation := fmt.Sprintf("files/%s", filename)
-
-	_, err = h.campaignService.UploadCampaignImage(input, fileLocation)
-	if err != nil {
-		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
-		helper.JSON(w, response, http.StatusBadRequest)
-		return
-	}
-
-	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 06666)
-	if err != nil {
-		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
-		helper.JSON(w, response, http.StatusBadRequest)
-		return
-	}
-
-	defer targetFile.Close()
-
-	_, err = io.Copy(targetFile, uploadedFile)
+	_, err = h.campaignService.UploadCampaignImage(input, uploadedFile)
 	if err != nil {
 		response := helper.APIResponse("Failed to upload campaign image", http.StatusBadRequest, "error", err.Error())
 		helper.JSON(w, response, http.StatusBadRequest)
