@@ -6,3 +6,8 @@ type FileUploadResponse struct {
 	SecureURL string
 	Err       error
 }
+
+type Token struct {
+	AccessToken  string
+	RefreshToken string
+}

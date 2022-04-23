@@ -74,6 +74,15 @@ func (h *userHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// set refresh token in cookie
+	cookie := new(http.Cookie)
+	cookie.Name = "refresh-token"
+	cookie.Value = token.RefreshToken
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+
+	http.SetCookie(w, cookie)
+
 	formatter := user.FormatUser(newUser, token)
 	response := helper.APIResponse("Account has been created", http.StatusCreated, "success", formatter)
 	helper.JSON(w, response, http.StatusCreated)
@@ -125,6 +134,15 @@ func (h *userHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		helper.JSON(w, response, http.StatusBadRequest)
 		return
 	}
+
+	// set refresh token in cookie
+	cookie := new(http.Cookie)
+	cookie.Name = "refresh-token"
+	cookie.Value = token.RefreshToken
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+
+	http.SetCookie(w, cookie)
 
 	formatter := user.FormatUser(loggedInUser, token)
 	response := helper.APIResponse("Login successfully", http.StatusOK, "success", formatter)
