@@ -70,17 +70,24 @@ func main() {
 			r.Post("/users", userHandler.RegisterUser)
 			r.Post("/sessions", userHandler.LoginUser)
 			r.Post("/email_checkers", userHandler.IsEmailAvailable)
+
 			r.With(func(h http.Handler) http.Handler {
 				return cm.AuthMiddleware(h, authService, userService)
 			}).Post("/avatars", userHandler.UploadAvatar)
+
+			r.With(func(h http.Handler) http.Handler {
+				return cm.AuthMiddleware(h, authService, userService)
+			}).Post("/refresh-token", userHandler.RefreshToken)
 		})
 
 		r.Group(func(r chi.Router) {
 			r.Get("/campaigns", campaignHandler.GetCampaigns)
 			r.Get("/campaigns/{id}", campaignHandler.GetCampaignDetail)
+
 			r.With(func(h http.Handler) http.Handler {
 				return cm.AuthMiddleware(h, authService, userService)
 			}).Post("/campaigns", campaignHandler.CreateCampaign)
+
 			r.With(func(h http.Handler) http.Handler {
 				return cm.AuthMiddleware(h, authService, userService)
 			}).Post("/campaign-images", campaignHandler.UploadCampaignImage)

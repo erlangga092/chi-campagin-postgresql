@@ -239,3 +239,73 @@ func (h *userHandler) UploadAvatar(w http.ResponseWriter, r *http.Request) {
 	response := helper.APIResponse("Success upload avatar", http.StatusCreated, "success", data)
 	helper.JSON(w, response, http.StatusCreated)
 }
+
+func (h *userHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		errorMessage := "Content type must be application/json"
+
+		response := helper.APIResponse("Failed to refresh token", http.StatusBadRequest, "error", errorMessage)
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	v := validator.New()
+	input := key.Token{}
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		response := helper.APIResponse("Failed to refresh token", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	// validate input
+	err = v.Struct(input)
+	if err != nil {
+		var errors []string
+
+		for _, e := range err.(validator.ValidationErrors) {
+			errors = append(errors, e.Error())
+		}
+
+		response := helper.APIResponse("Failed to refresh token", http.StatusUnprocessableEntity, "error", errors)
+		helper.JSON(w, response, http.StatusUnprocessableEntity)
+		return
+	}
+
+	user, err := auth.NewJwtService().ValidateRefreshToken(input)
+	if err != nil {
+		response := helper.APIResponse("Failed to refresh token", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	detailUser, err := h.userService.GetUserByID(user.ID)
+	if err != nil {
+		response := helper.APIResponse("Failed to refresh token", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	token, err := h.authService.GenerateToken(detailUser.ID)
+	if err != nil {
+		response := helper.APIResponse("Failed to refresh token", http.StatusBadRequest, "error", err.Error())
+		helper.JSON(w, response, http.StatusBadRequest)
+		return
+	}
+
+	// set refresh token in cookie
+	cookie := new(http.Cookie)
+	cookie.Name = "refresh-token"
+	cookie.Value = token.RefreshToken
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+
+	http.SetCookie(w, cookie)
+
+	jwtToken := key.Token{}
+	jwtToken.AccessToken = token.AccessToken
+
+	response := helper.APIResponse("Success create refresh token", http.StatusCreated, "success", jwtToken)
+	helper.JSON(w, response, http.StatusCreated)
+}
