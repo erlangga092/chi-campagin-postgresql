@@ -3,11 +3,12 @@ package user
 import "funding-app/app/key"
 
 type UserFormatter struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Occupation  string `json:"occupation"`
-	Email       string `json:"email"`
-	AccessToken string `json:"access_token"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Occupation   string `json:"occupation"`
+	Email        string `json:"email"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func FormatUser(user User, token key.Token) UserFormatter {
@@ -17,6 +18,7 @@ func FormatUser(user User, token key.Token) UserFormatter {
 	formatter.Occupation = user.Occupation
 	formatter.Email = user.Email
 	formatter.AccessToken = token.AccessToken
+	formatter.RefreshToken = token.RefreshToken
 
 	return formatter
 }
